@@ -4,6 +4,7 @@ import os
 import aws_cdk as cdk
 
 from hacker_news_bronze.hacker_news_bronze_stack import HackerNewsBronzeStack
+from x_bronze.x_bronze_stack import XBronzeStack
 
 
 app = cdk.App()
@@ -24,5 +25,5 @@ HackerNewsBronzeStack(app, "HackerNewsBronzeStack",
 
     # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
     )
-
+XBronzeStack(app, "XBronzeStack")
 app.synth()

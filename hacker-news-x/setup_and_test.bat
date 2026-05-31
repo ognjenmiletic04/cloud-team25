@@ -11,7 +11,7 @@ echo.
 echo ============================================
 echo AWS CLI VERSION
 echo ============================================
-aws --version
+call aws --version
 
 echo.
 echo ============================================
@@ -29,19 +29,19 @@ echo.
 echo ============================================
 echo AWS IDENTITY
 echo ============================================
-aws sts get-caller-identity
+call aws sts get-caller-identity
 
 echo.
 echo ============================================
 echo DEPLOY
 echo ============================================
-call cdk deploy --require-approval never
+call cdk deploy --all --require-approval never
 
 echo.
 echo ============================================
 echo S3 CONTENTS
 echo ============================================
-aws s3 ls s3://social-media-bronze-cloud-team25/bronze/hacker-news/ --recursive
+call aws s3 ls s3://social-media-bronze-cloud-team25/bronze/ --recursive
 
 echo.
 echo DONE

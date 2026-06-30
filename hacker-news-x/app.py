@@ -1,29 +1,48 @@
 #!/usr/bin/env python3
-import os
-
 import aws_cdk as cdk
 
-from hacker_news_bronze.hacker_news_bronze_stack import HackerNewsBronzeStack
-from x_bronze.x_bronze_stack import XBronzeStack
+from lib.data_lake_stack import SocialMediaDataLakeStack
+from lib.hacker_news_bronze_stack import HackerNewsBronzeStack
+from lib.x_bronze_stack import XBronzeStack
+from lib.silver_stack import SilverStack
 
 
 app = cdk.App()
-HackerNewsBronzeStack(app, "HackerNewsBronzeStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+env = cdk.Environment(
+    account=app.node.try_get_context("account"),
+    region=app.node.try_get_context("region") or "us-east-1",
+)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+data_lake = SocialMediaDataLakeStack(app, "SocialMediaDataLakeStack", env=env)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
+hacker_news_bronze = HackerNewsBronzeStack(
+    app,
+    "HackerNewsBronzeStack",
+    bronze_bucket=data_lake.bronze_bucket,
+    vpc=data_lake.vpc,
+    env=env,
+)
 
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
+x_bronze = XBronzeStack(
+    app,
+    "XBronzeStack",
+    bronze_bucket=data_lake.bronze_bucket,
+    vpc=data_lake.vpc,
+    env=env,
+)
 
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
-XBronzeStack(app, "XBronzeStack")
+silver = SilverStack(
+    app,
+    "SilverStack",
+    bronze_bucket=data_lake.bronze_bucket,
+    silver_bucket=data_lake.silver_bucket,
+    vpc=data_lake.vpc,
+    env=env,
+)
+
+hacker_news_bronze.add_dependency(data_lake)
+x_bronze.add_dependency(data_lake)
+silver.add_dependency(data_lake)
+
 app.synth()

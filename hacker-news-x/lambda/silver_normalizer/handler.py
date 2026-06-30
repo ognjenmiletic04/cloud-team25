@@ -3,6 +3,9 @@ import json
 import os
 import re
 import uuid
+import concurrent.futures
+import urllib.error
+import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -14,6 +17,8 @@ from botocore.exceptions import ClientError
 
 
 HN_TYPES = ["story", "comment", "ask", "job", "poll"]
+HN_USER_API_URL = "https://hacker-news.firebaseio.com/v0/user/{username}.json"
+
 
 s3_client = boto3.client("s3")
 
@@ -105,6 +110,7 @@ def _load_and_normalize_hacker_news(
     users: list[dict[str, Any]] = []
     posts: list[dict[str, Any]] = []
     summary: dict[str, Any] = {}
+    raw_items_by_type: dict[str, list[dict[str, Any]]] = {}
 
     for hn_type in HN_TYPES:
         key = (
@@ -115,10 +121,24 @@ def _load_and_normalize_hacker_news(
             f"type={hn_type}/data.json"
         )
         raw_items = _read_json_array_from_s3(bucket_name, key)
+        raw_items_by_type[hn_type] = raw_items
         summary[hn_type] = {"bronze_key": key, "raw_count": len(raw_items)}
 
+    usernames = {
+        _clean_string(item.get("author") or item.get("by"))
+        for items in raw_items_by_type.values()
+        for item in items
+        if _clean_string(item.get("author") or item.get("by"))
+    }
+    karma_by_username = _fetch_hn_karma_scores(usernames)
+    summary["_karma_fetch"] = {
+        "unique_authors": len(usernames),
+        "karma_resolved": len(karma_by_username),
+    }
+
+    for hn_type, raw_items in raw_items_by_type.items():
         for item in raw_items:
-            user = _normalize_hn_user(item)
+            user = _normalize_hn_user(item, karma_by_username)
             if user:
                 users.append(user)
             post = _normalize_hn_post(item, hn_type)
@@ -180,7 +200,7 @@ def _read_json_array_from_s3(bucket_name: str, key: str) -> list[dict[str, Any]]
 # ---------------------------------------------------------------------------
 
 
-def _normalize_hn_user(item: dict[str, Any]) -> dict[str, Any] | None:
+def _normalize_hn_user(item: dict[str, Any], karma_by_username: dict[str, int]) -> dict[str, Any] | None:
     username = _clean_string(item.get("author") or item.get("by"))
     if not username:
         return None
@@ -191,7 +211,7 @@ def _normalize_hn_user(item: dict[str, Any]) -> dict[str, Any] | None:
         "username": username,
         "display_name": username,
         "created_at": None,
-        "karma_score": _to_int(item.get("karma")),
+        "karma_score": karma_by_username.get(username),
         "is_verified": None,
         "followers_count": None,
         "last_seen_at": _normalize_datetime(item.get("created_at_i") or item.get("created_at")),
@@ -229,7 +249,36 @@ def _normalize_hn_post(item: dict[str, Any], hn_type: str) -> dict[str, Any] | N
         "child_post_ids": _json_to_string(item.get("kids") or item.get("children")),
     }
 
+def _fetch_hn_karma_scores(usernames: set[str], max_workers: int = 20, timeout: int = 5) -> dict[str, int]:
+    """Fetch current karma for a set of HN usernames via the public Firebase user API.
 
+    The HN search API used to collect stories/comments doesn't expose karma,
+    so it has to be fetched separately, per-user, from the profile endpoint.
+    Uses a thread pool since this can be a few thousand sequential HTTP calls
+    per daily run otherwise.
+    """
+    karma_by_username: dict[str, int] = {}
+
+    def _fetch_one(username: str) -> tuple[str, int | None]:
+        url = HN_USER_API_URL.format(username=username)
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                data = json.loads(response.read().decode("utf-8"))
+                if isinstance(data, dict):
+                    return username, data.get("karma")
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError):
+            pass
+        return username, None
+
+    if not usernames:
+        return karma_by_username
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        for username, karma in executor.map(_fetch_one, usernames):
+            if karma is not None:
+                karma_by_username[username] = karma
+
+    return karma_by_username
 # ---------------------------------------------------------------------------
 # X normalization
 # ---------------------------------------------------------------------------

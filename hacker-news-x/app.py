@@ -5,6 +5,7 @@ from lib.data_lake_stack import SocialMediaDataLakeStack
 from lib.hacker_news_bronze_stack import HackerNewsBronzeStack
 from lib.x_bronze_stack import XBronzeStack
 from lib.silver_stack import SilverStack
+from lib.gold_stack import GoldStack
 
 
 app = cdk.App()
@@ -41,8 +42,18 @@ silver = SilverStack(
     env=env,
 )
 
+gold = GoldStack(
+    app,
+    "GoldStack",
+    silver_bucket=data_lake.silver_bucket,
+    gold_bucket=data_lake.gold_bucket,
+    vpc=data_lake.vpc,
+    env=env,
+)
+
 hacker_news_bronze.add_dependency(data_lake)
 x_bronze.add_dependency(data_lake)
 silver.add_dependency(data_lake)
+gold.add_dependency(data_lake)
 
 app.synth()

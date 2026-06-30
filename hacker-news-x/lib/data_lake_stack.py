@@ -57,7 +57,10 @@ class SocialMediaDataLakeStack(Stack):
             "SocialMediaSilverBucket",
             "social-media-silver-cloud-team25",
         )
-
+        self.gold_bucket = self._create_data_bucket(
+        "SocialMediaGoldBucket",
+        "social-media-gold-cloud-team25",
+        )
         self.artifacts_bucket = self._create_data_bucket(
             "SocialMediaArtifactsBucket",
             "social-media-artifacts-cloud-team25",
@@ -65,6 +68,7 @@ class SocialMediaDataLakeStack(Stack):
 
         CfnOutput(self, "BronzeBucketName", value=self.bronze_bucket.bucket_name)
         CfnOutput(self, "SilverBucketName", value=self.silver_bucket.bucket_name)
+        CfnOutput(self, "GoldBucketName", value=self.gold_bucket.bucket_name)
         CfnOutput(self, "ArtifactsBucketName", value=self.artifacts_bucket.bucket_name)
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)
 

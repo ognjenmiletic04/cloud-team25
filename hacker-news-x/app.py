@@ -6,6 +6,7 @@ from lib.hacker_news_bronze_stack import HackerNewsBronzeStack
 from lib.x_bronze_stack import XBronzeStack
 from lib.silver_stack import SilverStack
 from lib.gold_stack import GoldStack
+from lib.discord_notifier_stack import DiscordNotifierStack
 
 
 app = cdk.App()
@@ -41,13 +42,14 @@ silver = SilverStack(
     vpc=data_lake.vpc,
     env=env,
 )
-
+discord_notifier = DiscordNotifierStack(app, "DiscordNotifierStack", env=env)
 gold = GoldStack(
     app,
     "GoldStack",
     silver_bucket=data_lake.silver_bucket,
     gold_bucket=data_lake.gold_bucket,
     vpc=data_lake.vpc,
+    notifier_lambda=discord_notifier.notifier_lambda,   # <-- DODATO
     env=env,
 )
 
@@ -55,5 +57,6 @@ hacker_news_bronze.add_dependency(data_lake)
 x_bronze.add_dependency(data_lake)
 silver.add_dependency(data_lake)
 gold.add_dependency(data_lake)
+gold.add_dependency(discord_notifier)
 
 app.synth()

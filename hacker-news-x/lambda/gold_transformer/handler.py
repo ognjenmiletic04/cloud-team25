@@ -16,6 +16,7 @@ def lambda_handler(event, context):
     gold_bucket = os.environ["GOLD_BUCKET_NAME"]
     silver_prefix = os.environ.get("SILVER_PREFIX", "silver")
     gold_prefix = os.environ.get("GOLD_PREFIX", "gold")
+    #raise Exception("TEST ZA PORUKU NA DISKRODU!!!!!!!!!")
 
     target_date = _get_target_date(event)
 
@@ -58,6 +59,7 @@ def lambda_handler(event, context):
     )
 
     return {
+        
         "statusCode": 200,
         "body": json.dumps(
             {

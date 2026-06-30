@@ -4,6 +4,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_s3 as s3,
     aws_lambda as _lambda,
+    aws_lambda_destinations as destinations,
     aws_events as events,
     aws_events_targets as targets,
     CfnOutput,
@@ -27,6 +28,7 @@ class GoldStack(Stack):
         silver_bucket: s3.IBucket,
         gold_bucket: s3.IBucket,
         vpc: ec2.IVpc | None = None,
+        notifier_lambda: _lambda.IFunction | None = None,   
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -66,7 +68,10 @@ class GoldStack(Stack):
             gold_lambda,
             "gold/*",
         )
-
+        if notifier_lambda is not None:
+            gold_lambda.configure_async_invoke(
+                on_failure=destinations.LambdaDestination(notifier_lambda)
+            )
         daily_schedule = events.Rule(
             self,
             "DailyGoldTransformationSchedule",

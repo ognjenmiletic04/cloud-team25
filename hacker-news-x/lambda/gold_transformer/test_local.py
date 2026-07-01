@@ -13,3 +13,9 @@ print(result1)
 print("\n=== X day (2020-07-25) ===")
 result2 = lambda_handler({"target_date": "2020-07-25"}, None)
 print(result2)
+
+print("\n=== TOP 10 HN KORISNIKA ===")
+print(top_hn_users_by_karma_df[['username', 'karma']].to_string())
+
+print("\n=== BOTTOM 10 HN KORISNIKA ===")
+print(bottom_hn_users_by_karma_df[['username', 'karma']].to_string())

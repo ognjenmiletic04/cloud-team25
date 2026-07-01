@@ -47,9 +47,8 @@ class SocialMediaDataLakeStack(Stack):
             service=ec2.GatewayVpcEndpointAwsService.S3,
         )
 
-        self.bronze_bucket = s3.Bucket.from_bucket_name(
-            self,
-            "ImportedSocialMediaBronzeBucket",
+        self.bronze_bucket = self._create_data_bucket(
+            "SocialMediaBronzeBucket",
             "social-media-bronze-cloud-team25",
         )
 

@@ -1,0 +1,1 @@
+{"statusCode": 200, "body": "{\"message\": \"Gold transformation completed\", \"target_date\": \"2026-06-30\", \"tables_written\": {\"daily_content_metrics\": 5, \"daily_users_metric\": 2, \"top_x_users_by_followers\": 10, \"top_hn_users_by_karma\": 10, \"bottom_hn_users_by_karma\": 10, \"top_hn_jobs_by_score\": 0, \"top_hn_posts_by_score\": 10, \"data_quality_metric\": 2}}"}
